@@ -45,7 +45,7 @@ public class FRHT {
 	 
 	public static void main(String[] args) throws IOException {
 		// TODO Auto-generated method stub
-		int w=40; 
+		int w=90; 
 		
 		class Pair<T>{
 			 T x;
@@ -70,8 +70,8 @@ public class FRHT {
         for(int i =0+w; i<binaryMat.rows()-w;i++){
         	for(int j=0+w;j<binaryMat.cols()-w;j++){
         		if(binaryMat.get(i,j)[0]==0){
-        			edge.add(new Pair<Integer>(i,j));
-        			//System.out.println(String.valueOf(i)+" "+String.valueOf(j)+"\n");
+        			edge.add(new Pair<Integer>(j,i));
+        			
         		}
         	}
         }
@@ -82,7 +82,7 @@ public class FRHT {
         System.out.println(pos);
         Pair<Integer> selected = edge.get(pos);
         System.out.println(String.valueOf(selected.x)+" "+String.valueOf(selected.y));
-        //Rect rect = new Rect(selected.x-w , selected.y-w );
+        
         
         Rect rect = new Rect(selected.x-w, selected.y-w,2*w,2*w);
         Mat roi = new Mat(binaryMat, rect);
@@ -94,23 +94,28 @@ public class FRHT {
         for(int i =0; i<roi.rows();i++){
         	for(int j=0;j<roi.cols();j++){
         		if(roi.get(i,j)[0]==0){
-        			Double d = Math.sqrt((selected.y-i)^2+(selected.x-j)^2);
+        			Double d = Math.sqrt(Math.pow((selected.y-i),2)+Math.pow((selected.x-j),2));
         			if(counter.get(d)==null){
-        				counter.put(d, new Pair<Integer>(i,j));
+        				counter.put(d, new Pair<Integer>(j,i));
         			}else{
-        				cans.add(new Cans<Pair<Integer>>(selected, counter.get(d), new Pair<Integer>(i,j)));
+        
+        				cans.add(new Cans<Pair<Integer>>(selected, counter.get(d), new Pair<Integer>(j,i)));
         				counter.remove(d);
-        				System.out.println("out here");
+        
         			}
-        			//edge.add(new Pair<Integer>(i,j));
-        			//System.out.println(String.valueOf(i)+" "+String.valueOf(j)+"\n");
+        
         		}
         	}
         }
         
-        
-        //Mat binary = binaryMat.clone();
-        
+       System.out.println("Candidate :");
+       for(Cans<Pair<Integer>> can : cans){
+    	   System.out.println("("+can.x.x.toString()+","+can.x.y.toString()+";"
+    			   		+can.y.x.toString()+","+can.y.y.toString()+";"
+    			   		+can.z.x.toString()+","+can.z.y.toString()+")"
+    			   		+String.valueOf(Math.sqrt(Math.pow(can.x.x-can.y.x,2)+Math.pow(can.x.y-can.y.y,2)))+"|"
+    			   		+String.valueOf(Math.sqrt(Math.pow(can.x.x-can.z.x,2)+Math.pow(can.x.y-can.z.y,2))));
+       }
         
         dumper(binaryMat, "ehe1.csv");
 	}
