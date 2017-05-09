@@ -45,33 +45,42 @@ public class FRHT {
 		out.close(); 
 	}
 	
-	
+	static class Point{
+		Integer x;
+		Integer y;
+		Point(Integer x, Integer y){this.x=x;this.y=y;}
+	}
 
+	
+	static class Cans{
+		Integer x;
+		Integer y;
+		Double rc;
+		Cans(Integer xc, Integer yc, Double rc2){this.x = xc; this.y = yc; this.rc = rc2;}
+	}
+
+	
+	public static Cans getCentre(Point a, Point b, Point c){
+		Double a1 = -1 * Double.valueOf((b.x - a.x)/(b.y - a.y));
+		Double b1 = Double.valueOf((a.y+b.y)/2) - a1 *Double.valueOf((a.x+b.x)/2);
+		
+		Double a2 = -1 * Double.valueOf((c.x-b.x)/(c.y-b.y));
+		Double b2 = Double.valueOf((b.y+c.y)/2) - a2 *Double.valueOf((b.x+c.x)/2);
+		
+		Integer xc = (int)((b2 - b1)/(a1 - a2));
+		Integer yc = (int) ((a1*xc)+b1);
+		
+		Double rc = Math.sqrt(Math.pow((a.x-xc),2)+Math.pow((a.y-yc),2));
+		
+		return new Cans(xc, yc,rc);
+	}
 
 
 	public static void main(String[] args) throws IOException {
 		// TODO Auto-generated method stub
 		int w=60; 
 
-		class Point{
-			Integer x;
-			Integer y;
-			Point(Integer x, Integer y){this.x=x;this.y=y;}
-		}
-
-		class Pair{
-			Point a;
-			Point b;
-			Pair(Point a, Point b){this.a=a;this.b=b;}
-		}
-
-		class Cans{
-			Point seed;
-			ArrayList<Pair> points;
-			Integer acc;
-			Cans(Point seed){this.seed=seed;points = new ArrayList<Pair>();}
-		}
-
+		
 		Mat grayscaleMat = Imgcodecs.imread("data/test.jpg", Imgcodecs.CV_LOAD_IMAGE_GRAYSCALE);		
 
 
@@ -111,8 +120,7 @@ public class FRHT {
 			//get candidate
 			Map<Double, Point> counter = new HashMap<Double, Point>();
 			
-			
-			Cans ncans = new Cans(selected);
+			//Cans ncans = new Cans(selected);
 			for(int i =selected.y-w; i<(selected.y-w)+2*w;i++){
 				for(int j=selected.x-w;j<(selected.x-w)+2*w;j++){
 					if(binaryMat.get(i,j)[0]==0){
@@ -120,7 +128,8 @@ public class FRHT {
 						if(counter.get(d)==null){
 							counter.put(d, new Point(j,i));
 						}else{
-							ncans.points.add(new Pair(counter.get(d), new Point(j,i)));
+							cans.add(getCentre(counter.get(d), selected, new Point(j,i)));
+							//ncans..add(new Pair(counter.get(d), new Point(j,i)));
 							counter.remove(d);
 						}
 					}
@@ -134,22 +143,24 @@ public class FRHT {
 				
 				dumper(roi, "ehe2.csv");
 			}*/
-			cans.add(ncans);
+			//cans.add(ncans);
 		}
-
+		
+		
 		//System.out.println(cans.size());
 		
 		/*Sorting*/
+		
 		Collections.sort(cans, new Comparator<Cans>(){
 
 			@Override
 			public int compare(Cans arg0, Cans arg1) {
 				// TODO Auto-generated method stub
-				if(arg0.points.size()>arg1.points.size()){
+				if(arg0.rc>arg1.rc){
 					return -1;
 				}
 				
-				else if (arg0.points.size()<arg1.points.size()){
+				else if (arg0.rc<arg1.rc){
 					return 1;
 				}
 				return 0;
@@ -157,6 +168,11 @@ public class FRHT {
 			
 		});
 		
+		for(Cans a : cans){
+			System.out.println(a.x.toString()+" "+a.y.toString()+" "+a.rc.toString());
+		}
+		
+		/*
 		Cans candidate = cans.get(0);
 		System.out.println("Candidate: "+"("+candidate.points.size()+")"+candidate.seed.x.toString()+","+candidate.seed.y.toString());
 		
@@ -171,6 +187,7 @@ public class FRHT {
 		}
 		
 		res.put(candidate.seed.y,candidate.seed.x, 128);
+		*/
 		/*for(Cans can : cans){
 			System.out.println("Candidate :");
 			System.out.println(can.points.size());
@@ -189,10 +206,10 @@ public class FRHT {
 		
 		
 		
-		Imgcodecs.imwrite("lala.jpg", res, matInt);
+		//Imgcodecs.imwrite("lala.jpg", res, matInt);
 		
 
-		dumper(res, "ehe1.csv");
+		//dumper(res, "ehe1.csv");
 	}
 	
 
