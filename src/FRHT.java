@@ -40,19 +40,20 @@ public class FRHT {
 	
 	
 	public static void main(String[] args) throws IOException {
-		Point a = new Point(4,1);
-		Point b = new Point(-3,7);
-		Point c = new Point(5,-2);
+		/*Point c = new Point(4,1);
+		Point a = new Point(-3,7);
+		Point b = new Point(5,-2);
 		
-		findCenter(a,b,c);
-		
+		String res = findCenter(a,b,c);
+		*/
+		//System.out.println(res);
 		//System.out.println(la.x+" "+la.y);
-		//Mat grayscaleMat = Imgcodecs.imread("data/test.jpg", Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
+		Mat grayscaleMat = Imgcodecs.imread("data/test.jpg", Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
 		
 		
 		//Mat binaryMat = new Mat();
 		//Imgproc.threshold(grayscaleMat, binaryMat, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
-		//FRHT(grayscaleMat);
+		FRHT(grayscaleMat);
 		
 		
 		//preprocess(grayscaleMat);
@@ -98,60 +99,13 @@ public class FRHT {
 		}
 	}
 	
-	public static boolean istegak(Point a, Point b, Point c) {
-		double yDelta_a = b.y - a.y;
-		double xDelta_a = b.x - a.x;
-		double yDelta_b = c.y - b.y;
-		double xDelta_b = c.x - b.x;
-		if (Math.abs(xDelta_a) <= 0.000000001 && Math.abs(yDelta_b) <= 0.000000001)
-			return false;
-		if (Math.abs(yDelta_a) <= 0.0000001)
-			return true;
-		else if (Math.abs(yDelta_b) <= 0.0000001)
-			return true;
-		else if (Math.abs(xDelta_a) <= 0.000000001)
-			return true;
-		else if (Math.abs(xDelta_b) <= 0.000000001)
-			return true;
-		else
-			return false;
-	}
-
-	public static Point getC(Point a, Point b, Point c) {
-
-		double yDelta_a = b.y - a.y;
-		double xDelta_a = b.x - a.x;
-		double yDelta_b = c.y - b.y;
-		double xDelta_b = c.x - b.x;
-
-		if (Math.abs(xDelta_a) <= 0.000000001 && Math.abs(yDelta_b) <= 0.000000001) {
-
-			Double m_x = 0.5 * (b.x + c.x);
-			Double m_y = 0.5 * (a.y + b.y);
-			System.out.println(m_x+" "+m_y);
-
-			return new Point(m_x.intValue(), m_y.intValue());
-		}
-
-		// IsPerpendicular() assure that xDelta(s) are not zero
-		double aSlope = yDelta_a / xDelta_a; //
-		double bSlope = yDelta_b / xDelta_b;
-		if (Math.abs(aSlope - bSlope) <= 0.000000001) { // checking whether the
-			// given points are
-			// colinear.
-			return new Point(-1, -1);
-		}
-
-		// calc center
-		Double m_x = (aSlope * bSlope * (a.y -c.y) + bSlope * (a.x + b.x) - aSlope * (b.x + c.x))
-				/ (2 * (bSlope - aSlope));
-		Double m_y = -1 * (m_x - (a.x + b.x) / 2) / aSlope + (a.y + b.y) / 2;
-		
-		System.out.println(m_x+" "+m_y);
-		return new Point(m_x.intValue(), m_y.intValue());
-	}
 	
-	public static void findCenter(Point a, Point b, Point c){
+	
+	public static String findCenter(Point a, Point b, Point c){
+		
+		//http://www.ambrsoft.com/TrigoCalc/Circle3D.htm
+		//base on Integer
+		
 		Integer A = a.x*(b.y - c.y) 
 				- a.y*(b.x-c.x) 
 				+ b.x*c.y 
@@ -169,15 +123,16 @@ public class FRHT {
 				+(b.x*b.x+b.y*b.y)*(a.x*c.y-c.x*a.y)
 				+(c.x*c.x+c.y*c.y)*(b.x*a.y-a.x*b.y);
 		
-		Double x = (double) -1*B/(2*A);
-		Double y = (double) -1*C/(2*A);
+		Integer x =  Math.round(-1*B/(2*A));
+		Integer y =  Math.round(-1*C/(2*A));
+		Integer r = (int) Math.round(Math.sqrt((B*B + C*C - 4*A*D)/(4*A*A)));
 		
+		String key = x.toString() + ";" + y.toString() + ";" + r.toString();
 		
-		System.out.println(A + " "+ B+" "+C + " "+ D);
-		System.out.println(x + " "+ y);
+		//System.out.pritln(A + " "+ B+" "+C + " "+ D);
+		//System.out.println(x + " "+ y+" "+ r);
 		
-		
-		
+		return key;
 	}
 
 
@@ -306,26 +261,8 @@ public class FRHT {
 						if (counter.get(d) == null) {
 							counter.put(d, new Point(j, i));
 						} else {
-							Point la = new Point(-1, -1);
-							
-							if (!istegak(counter.get(d), selected, new Point(j, i)))
-								la = getC(counter.get(d), selected, new Point(j, i));
-							else if (!istegak(counter.get(d), new Point(j, i), selected))
-								la = getC(counter.get(d), new Point(j, i), selected);
-							else if (!istegak(selected, counter.get(d), new Point(j, i)))
-								la = getC(selected, counter.get(d), new Point(j, i));
-							else if (!istegak(selected, new Point(j, i), counter.get(d)))
-								la = getC(selected, new Point(j, i), counter.get(d));
-							else if (!istegak(new Point(j, i), selected, counter.get(d)))
-								la = getC(new Point(j, i), selected, counter.get(d));
-							else if (!istegak(new Point(j, i), counter.get(d), selected))
-								la = getC(new Point(j, i), counter.get(d), selected);
-
-							if (la.x != -1 && la.y != -1) {
-
-								Integer dis = (int) Math.sqrt(Math.pow((selected.y - la.y), 2) + Math.pow((selected.x - la.x),2));
-								String key = la.x.toString() + ";" + la.y.toString() + ";" + dis;
-
+							String key = findCenter(counter.get(d), new Point(j,i), selected);
+								
 								if (cans.get(key) == null) {
 									cans.put(key, 1);
 								} else {
@@ -337,7 +274,6 @@ public class FRHT {
 									high = key;
 								}
 								
-							}
 							
 							counter.remove(d);
 						}
