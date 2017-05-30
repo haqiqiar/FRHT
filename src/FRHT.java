@@ -1,13 +1,16 @@
+import java.util.List;
 import java.awt.image.BufferedImage;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -37,44 +40,48 @@ public class FRHT {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 	}
 
-	
-	
 	public static void main(String[] args) throws IOException {
-		/*Point c = new Point(4,1);
-		Point a = new Point(-3,7);
-		Point b = new Point(5,-2);
 		
-		String res = findCenter(a,b,c);
+		/*
+		 * successful one
+		int nrandom = 200;
+		int window = 60;
+		double mratio = 0.22985;
 		*/
-		//System.out.println(res);
-		//System.out.println(la.x+" "+la.y);
-		Mat grayscaleMat = Imgcodecs.imread("data/test.jpg", Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
 		
+		int nrandom = 200;
+		int window = 60;
+		double mratio = 0.22985;
 		
-		//Mat binaryMat = new Mat();
-		//Imgproc.threshold(grayscaleMat, binaryMat, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
-		FRHT(grayscaleMat);
+		Mat dst = new Mat();
+		Mat src = Imgcodecs.imread("data/test.jpg", Imgcodecs.CV_LOAD_IMAGE_COLOR);
+		Imgproc.cvtColor(src, dst, Imgproc.COLOR_BGR2GRAY);
 		
+		Mat edged = edgeDetector(dst);
 		
-		//preprocess(grayscaleMat);
+		String res = doFRHT(edged, nrandom,  window, mratio);
 		
-		//Imgproc.cvtColor(grayscaleMat, grayscaleMat, Imgproc.COLOR_BGR2GRAY);
-		//Imgproc.equalizeHist(grayscaleMat, grayscaleMat);
-		//edgeDetector(grayscaleMat);
-		
-		//int morph_size = 1;
-		//Mat element = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE,
-		//		new Size(2 * morph_size + 1, 2 * morph_size + 1), new org.opencv.core.Point(1, 1));
-
-		/*Mat dst = new Mat();		Imgproc.morphologyEx(binaryMat, dst, 3, element);
-		Imgcodecs.imwrite("savedClosed.jpg", dst);
-				
-		Imgproc.morphologyEx(dst, dst, 2, element);
-		Imgcodecs.imwrite("savedOpened.jpg", dst);
-		*/
-		//FRHT(grayscaleMat);
-		
-		
+		if(res !=""){
+			String[] det = res.split(";");
+			Scalar warna = new Scalar(255,255,255);
+			src.copyTo(dst);
+			Imgproc.circle(dst, new org.opencv.core.Point(Double.valueOf(det[0]),Double.valueOf(det[1])), Double.valueOf(det[2]).intValue(), warna);
+			
+			Mat finale = new Mat();
+			List<Mat> alist = Arrays.asList(src, dst);
+			Core.hconcat(alist, finale);
+			Imgcodecs.imwrite("saved7Circled.jpg", dst);
+			Imgcodecs.imwrite("saved8Result.jpg", finale);
+		}
+	}
+	
+	private static Mat addTo(Mat matA, Mat matB) {
+	    Mat m = new Mat(matA.rows(), matA.cols() +  matB.cols(), matA.type());
+	    int aCols = matA.cols();
+	    int aRows = matA.rows();
+	    m.rowRange(0, aRows-1).colRange(0, aCols-1);
+	    m.rowRange(0, aRows-1).colRange(aCols, (aCols*2)-1);
+	    return m;
 	}
 
 	static class Point {
@@ -99,7 +106,18 @@ public class FRHT {
 		}
 	}
 	
-	
+	public static Mat edgeDetector(Mat src) {
+		Mat dst = new Mat();
+		Imgproc.blur(src, dst, new Size(3, 3));
+		Imgcodecs.imwrite("saved5Blurred.jpg", src);
+		
+		double thres = 19.4;
+		Imgproc.Canny(dst, dst, thres, thres*3);
+		Core.bitwise_not(dst, dst);
+		Imgcodecs.imwrite("saved6Edge.jpg", dst);
+		
+		return dst;
+	}
 	
 	public static String findCenter(Point a, Point b, Point c){
 		
@@ -123,13 +141,23 @@ public class FRHT {
 				+(b.x*b.x+b.y*b.y)*(a.x*c.y-c.x*a.y)
 				+(c.x*c.x+c.y*c.y)*(b.x*a.y-a.x*b.y);
 		
+		//System.out.println(A + " "+ B+" "+C + " "+ D);
+		
+		if(A == 0){
+			return "";
+		}
+		
 		Integer x =  Math.round(-1*B/(2*A));
 		Integer y =  Math.round(-1*C/(2*A));
-		Integer r = (int) Math.round(Math.sqrt((B*B + C*C - 4*A*D)/(4*A*A)));
+		Double r = Math.sqrt((B*B + C*C - 4*A*D)/(4*A*A));
+		
+		if(r < 60){
+			return "";
+		}
 		
 		String key = x.toString() + ";" + y.toString() + ";" + r.toString();
 		
-		//System.out.pritln(A + " "+ B+" "+C + " "+ D);
+		
 		//System.out.println(x + " "+ y+" "+ r);
 		
 		return key;
@@ -167,8 +195,6 @@ public class FRHT {
 		//Imgproc.morphologyEx(dst, dst, 2, element);
 		//Imgcodecs.imwrite("savedOpened.jpg", dst);
 		
-		
-		edgeDetector(dst);
 	}
 	
 	
@@ -187,204 +213,89 @@ public class FRHT {
 		//Imgproc.morphologyEx(dst, dst, 2, element1);
 		//Imgcodecs.imwrite("saved6Opened.jpg", dst);
 		
-		FRHT(dst);
-		
 	}
 	
-
-	public static void edgeDetector(Mat src) {
-		
-		
-		Imgproc.blur(src, src, new Size(3, 3));
-		Imgcodecs.imwrite("saved4Blurred.jpg", src);
-		//Scalar val = Core.mean(src);
-		//double thres = val.val[0];
-		//System.out.println(thres);
-		
-		Mat dst = new Mat();
-		double thres = 19.4;
-		Imgproc.Canny(src, dst, thres, thres*3);
-		Core.bitwise_not(dst, dst);
-		//Imgcodecs.imwrite("befsavedEdge.jpg", src);
-		Imgcodecs.imwrite("saved4Edge.jpg", dst);
-		
-		
-		FRHT(dst);
-		//segmentasi(dst);
-	}
-
-	public static void FRHT(Mat src) {
-		// convert to binary
-
-		int w = 100;
-		//Mat grayscaleMat = src;
-		//Mat binaryMat = new Mat(grayscaleMat.size(), grayscaleMat.type());
-		Mat binaryMat = src;
+	
+	public static String doFRHT(Mat src, int nrandom, int w, double mratio) {
+	
 		Mat dst = new Mat();
 		src.copyTo(dst);
-		try {
-			dumper(src, "init.csv");
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		//Imgproc.threshold(grayscaleMat, binaryMat, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
-
+		
 		// extract points
 		ArrayList<Point> edge = new ArrayList<Point>();
-		for (int i = 0 + w; i < binaryMat.rows() - w; i++) {
-			for (int j = 0 + w; j < binaryMat.cols() - w; j++) {
-				if (binaryMat.get(i, j)[0] == 0) {
+		for (int i = 0 + w; i < src.rows() - w; i++) {
+			for (int j = 0 + w; j < src.cols() - w; j++) {
+				if (src.get(i, j)[0] == 0) {
 					edge.add(new Point(j, i));
 				}
 			}
 		}
-
-		Map<String, Integer> mcans = new HashMap<String, Integer>();
-		for (int n = 0; n < 200; n++) {
-
+		
+		for (int n = 0; n < nrandom; n++) {
+			
+			//pick random seed
 			Random rand = new Random();
 			int pos = rand.nextInt((edge.size() - 1) - 0 + 1) + 0;
-	
 			Point selected = edge.get(pos);
 		
 			Map<Double, Point> counter = new HashMap<Double, Point>();
 
 			Map<String, Integer> cans = new HashMap<String, Integer>();
+			
 			String high = "";
 			int nhigh = 0;
 
 			for (int i = selected.y - w; i < (selected.y - w) + 2 * w; i++) {
 				for (int j = selected.x - w; j < (selected.x - w) + 2 * w; j++) {
-					if (binaryMat.get(i, j)[0] == 0) {
+					if (src.get(i, j)[0] == 0) {
 						Double d = Math.sqrt(Math.pow((selected.y - i), 2) + Math.pow((selected.x - j), 2));
 						if (counter.get(d) == null) {
 							counter.put(d, new Point(j, i));
 						} else {
 							String key = findCenter(counter.get(d), new Point(j,i), selected);
-								
-								if (cans.get(key) == null) {
-									cans.put(key, 1);
-								} else {
-									cans.put(key, cans.get(key) + 1);
-								}
-								
-								if (nhigh <= cans.get(key)) {
-									nhigh = cans.get(key);
-									high = key;
-								}
-								
-							
+							if(key=="") continue;
+							if (cans.get(key) == null) {
+								cans.put(key, 1);
+							} else {
+								cans.put(key, cans.get(key) + 1);
+							}								
+							if (nhigh <= cans.get(key)) {
+								nhigh = cans.get(key);
+								high = key;
+							}				
 							counter.remove(d);
 						}
 					}
 				}
 			}
-
 			
+			if(high=="") continue;
 			String[] det = high.split(";");
-			
-			System.out.println(high);
+			//System.out.println(high);
 			int count = 0;
 			for (int i = selected.y - w; i < (selected.y - w) + 2 * w; i++) {
 				for (int j = selected.x - w; j < (selected.x - w) + 2 * w; j++) {
-					if (binaryMat.get(i, j)[0] == 0) {
-						Integer circ = (int) Math.sqrt(
-								Math.pow((i - Double.valueOf(det[1])), 2) + Math.pow((j - Double.valueOf(det[0])), 2));
+					if (src.get(i, j)[0] == 0) {
+						
+						Double circ =  Math.sqrt(
+								Math.pow((i - Integer.valueOf(det[1])), 2) + Math.pow((j - Integer.valueOf(det[0])), 2));
 						Double diff = circ - Double.valueOf(det[2]);
-						if ((diff <= 1) && (diff >= 0)) {
+						if ((diff <= 1) && (diff >= -1)) {
 							count++;
 						}
 					}
 				}
 			}
 
-			
-			Scalar warna = new Scalar(128,128,0);
-			
-			Imgproc.circle(dst, new org.opencv.core.Point(Double.valueOf(det[0]),Double.valueOf(det[1])), 1, warna);
-			Imgcodecs.imwrite("saved6Circled.jpg", dst);
+			Double ratio = (double) count / (2 * 3.14 * Double.valueOf(det[2]));
 
-			Double ratio = (double) count / (2 * Math.PI * Double.valueOf(det[2]));
-			//System.out.println(count + " " + ratio);
-			//Mat dst = src;
-			/*if(ratio > 0.8){
-				
-				
-				//Imgproc.circle(dst, new org.opencv.core.Point(Double.valueOf(det[0]),Double.valueOf(det[1])), Integer.valueOf(det[2]), warna);
-				Imgproc.circle(dst, new org.opencv.core.Point(Double.valueOf(det[0]),Double.valueOf(det[1])), 1, warna);
-				
-				Imgcodecs.imwrite("saved6Circled.jpg", dst);
-				System.out.println("saved");
-				//break; 
-			}*/
-			
-			
-
-		}
-
-		// Point la =new Point(1,1);
-		// cans.put("lala", 1);
-		// cans.put("lala", 2);
-		for (Map.Entry<String, Integer> entry : mcans.entrySet()) {
-			if (entry.getValue() > 4) {
-				System.out.println("Key = " + entry.getKey() + ", Value = " + entry.getValue());
+			if(ratio>mratio){
+				System.out.println(count + " " + ratio);
+				return high;
 			}
-		}
+		}		
+		return "";
 
-		// System.out.println(cans.size());
-
-		/* Sorting */
-
-		/*
-		 * Collections.sort(cans, new Comparator<Cans>(){
-		 * 
-		 * @Override public int compare(Cans arg0, Cans arg1) { // TODO
-		 * Auto-generated method stub if(arg0.rc>arg1.rc){ return -1; }
-		 * 
-		 * else if (arg0.rc<arg1.rc){ return 1; } return 0; }
-		 * 
-		 * });
-		 * 
-		 * for(Cans a : cans){
-		 * System.out.println(a.x.toString()+" "+a.y.toString()+" "+a.rc.
-		 * toString()); }
-		 */
-		/*
-		 * Cans candidate = cans.get(0);
-		 * System.out.println("Candidate: "+"("+candidate.points.size()+")"+
-		 * candidate.seed.x.toString()+","+candidate.seed.y.toString());
-		 * 
-		 * 
-		 * Mat res = Mat.zeros(binaryMat.size(), CvType.CV_32FC1); Integer i=0;
-		 * for (Pair a : candidate.points){ res.put(a.a.y, a.a.x,
-		 * Integer.valueOf(i.toString()+"25")); res.put(a.b.y, a.b.x,
-		 * Integer.valueOf(i.toString()+"25"));
-		 * System.out.println(a.a.x.toString()+","+a.a.y.toString()+";"+a.b.x.
-		 * toString()+","+a.b.y.toString()); i++; }
-		 * 
-		 * res.put(candidate.seed.y,candidate.seed.x, 128);
-		 */
-		/*
-		 * for(Cans can : cans){ System.out.println("Candidate :");
-		 * System.out.println(can.points.size());
-		 * 
-		 * /*System.out.println("("+can.seed.x.toString()+","+can.seed.y.
-		 * toString()+";"+")"); for(Pair now : can.points){
-		 * System.out.println(now.a.x.toString()+","+now.a.y.toString()+";"+now.
-		 * b.x.toString()+","+now.b.y.toString()); }(=
-		 * 
-		 * 
-		 * }
-		 */
-
-		MatOfInt matInt = new MatOfInt();
-
-		matInt.fromArray(Imgcodecs.CV_IMWRITE_PNG_COMPRESSION, 1);
-
-		// Imgcodecs.imwrite("lala.jpg", res, matInt);
-
-		// dumper(res, "ehe1.csv");
 	}
 
 	public static void printArr(byte[][] arr) {
