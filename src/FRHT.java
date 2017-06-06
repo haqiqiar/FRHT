@@ -50,40 +50,37 @@ public class FRHT {
 		*/
 		
 		int nrandom = 200;
-		int window = 60;
-		double mratio = 0.22985;
+		int window = 100;
+		double mratio = 0.22;
+		
+		
 		
 		Mat dst = new Mat();
-		Mat src = Imgcodecs.imread("data/test.jpg", Imgcodecs.CV_LOAD_IMAGE_COLOR);
-		Imgproc.cvtColor(src, dst, Imgproc.COLOR_BGR2GRAY);
-		
-		Mat edged = edgeDetector(dst);
-		
-		String res = doFRHT(edged, nrandom,  window, mratio);
-		
-		if(res !=""){
-			String[] det = res.split(";");
-			Scalar warna = new Scalar(255,255,255);
-			src.copyTo(dst);
-			Imgproc.circle(dst, new org.opencv.core.Point(Double.valueOf(det[0]),Double.valueOf(det[1])), Double.valueOf(det[2]).intValue(), warna);
+		for(int i = 390;i<391;i++){
+			System.out.println(i);
+			Mat matSrc = Imgcodecs.imread("data/test.jpg", Imgcodecs.CV_LOAD_IMAGE_COLOR);
 			
-			Mat finale = new Mat();
-			List<Mat> alist = Arrays.asList(src, dst);
-			Core.hconcat(alist, finale);
-			Imgcodecs.imwrite("saved7Circled.jpg", dst);
-			Imgcodecs.imwrite("saved8Result.jpg", finale);
+			Imgproc.cvtColor(matSrc, dst, Imgproc.COLOR_BGR2GRAY);
+			
+			Mat edged = edgeDetector(dst);
+			
+			String res = doFRHT(edged, nrandom,  window, mratio);
+			
+			if(res !=""){
+				String[] det = res.split(";");
+				Scalar warna = new Scalar(255,255,255);
+				matSrc.copyTo(dst);
+				Imgproc.circle(dst, new org.opencv.core.Point(Double.valueOf(det[0]),Double.valueOf(det[1])), Double.valueOf(det[2]).intValue(), warna);
+				
+				Mat finale = new Mat();
+				List<Mat> alist = Arrays.asList(matSrc, dst);
+				Core.hconcat(alist, finale);
+				Imgcodecs.imwrite("saved7Circled.jpg", dst);
+				Imgcodecs.imwrite("data/input/saved8Result"+i+".jpg", finale);
+			}
 		}
 	}
 	
-	private static Mat addTo(Mat matA, Mat matB) {
-	    Mat m = new Mat(matA.rows(), matA.cols() +  matB.cols(), matA.type());
-	    int aCols = matA.cols();
-	    int aRows = matA.rows();
-	    m.rowRange(0, aRows-1).colRange(0, aCols-1);
-	    m.rowRange(0, aRows-1).colRange(aCols, (aCols*2)-1);
-	    return m;
-	}
-
 	static class Point {
 		Integer x;
 		Integer y;
@@ -167,7 +164,6 @@ public class FRHT {
 	public static void preprocess(Mat src) {
 
 		// Strel
-		
 		Imgcodecs.imwrite("saved1Gray.jpg", src);
 		int morph_size = 3;
 		Mat element = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE,
@@ -185,34 +181,46 @@ public class FRHT {
 		// Adjusting
 		Imgproc.equalizeHist( dst, dst );
 		Imgcodecs.imwrite("saved3Adjust.jpg", dst);
-		
-		
-		
-		//Imgcodecs.imwrite("saved31Adjust.jpg", dst);
-		//Imgproc.morphologyEx(dst, dst, 3, element);
-		//Imgcodecs.imwrite("savedClosed.jpg", dst);
-		
-		//Imgproc.morphologyEx(dst, dst, 2, element);
-		//Imgcodecs.imwrite("savedOpened.jpg", dst);
-		
+	
 	}
 	
 	
-	public static void segmentasi(Mat src){
+	public static Mat segmentasi(Mat src){
 		int morph_size = 3;
 		Mat element = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE,
 				new Size(2 * morph_size + 1, 2 * morph_size + 1), new org.opencv.core.Point(3, 3));
 		
-		Mat element1 = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE,
-				new Size(2 * 1 + 1, 2 * 1 + 1), new org.opencv.core.Point(1, 1));
+		Mat element1 = Imgproc.getStructuringElement(Imgproc.MORPH_CROSS,
+				new Size(3,3));
 
 		Mat dst = new Mat();
+		Core.bitwise_not(src, src);
 		Imgproc.morphologyEx(src, dst, 3, element);
-		Imgcodecs.imwrite("saved5Closed.jpg", dst);
+		Imgcodecs.imwrite("saved5Closed.jpg", dst);	
+		
+		boolean done;
+		
+		Mat skel = new Mat(dst.size(), CvType.CV_8UC1, new Scalar(0));
+		
+		Mat eroded = new Mat();
+		Mat temp = new Mat();
+		do{
+			Imgproc.erode(dst, eroded, element1);
+			Imgproc.dilate(eroded, temp, element1);
+			Core.subtract(dst, temp, temp);
+			Core.bitwise_or(skel, temp, skel);
+			eroded.copyTo(dst);
+			done = (Core.countNonZero(dst) == 0);
+		}
+		while(!done);
+		
+		Imgcodecs.imwrite("saved6Opened.jpg", dst);
 				
 		//Imgproc.morphologyEx(dst, dst, 2, element1);
 		//Imgcodecs.imwrite("saved6Opened.jpg", dst);
 		
+		
+		return dst;
 	}
 	
 	
@@ -229,6 +237,10 @@ public class FRHT {
 					edge.add(new Point(j, i));
 				}
 			}
+		}
+		
+		if(edge.size()==0){
+			return "";
 		}
 		
 		for (int n = 0; n < nrandom; n++) {
@@ -287,7 +299,7 @@ public class FRHT {
 				}
 			}
 
-			Double ratio = (double) count / (2 * 3.14 * Double.valueOf(det[2]));
+			Double ratio = (double) count / (2 * Math.PI * Double.valueOf(det[2]));
 
 			if(ratio>mratio){
 				System.out.println(count + " " + ratio);
